@@ -1,19 +1,18 @@
 package com.agl.daily_news.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import java.util.Map;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.agl.daily_news.helper.ResponseHandler;
-import com.agl.daily_news.model.PasswordReset;
 import com.agl.daily_news.model.User;
-import com.agl.daily_news.service.User.UserService;
+import com.agl.daily_news.service.user.UserService;
 
 import jakarta.validation.Valid;
 
@@ -21,48 +20,49 @@ import jakarta.validation.Valid;
 @RequestMapping("/api/users")
 public class UserController {
 
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
+
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
 
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@Valid @RequestBody User userDto, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ResponseHandler.responseError(HttpStatus.BAD_REQUEST.value(), "Validation error", bindingResult.getAllErrors());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("message", "Validation error", "errors", bindingResult.getAllErrors()));
         }
         try {
             User registeredUser = userService.register(userDto);
-            return ResponseHandler.responseData(HttpStatus.OK.value(), "User registered successfully", registeredUser);
+            return ResponseEntity.status(HttpStatus.OK)
+                .body(Map.of("message", "User registered successfully", "user", registeredUser));
         } catch (Exception e) {
-            return ResponseHandler.responseError(HttpStatus.INTERNAL_SERVER_ERROR.value(), "An error occurred", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("message", "An error occurred", "error", e.getMessage()));
         }
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> loginUser(@Validated @RequestBody User userDto, BindingResult bindingResult) {
-        if (bindingResult.hasErrors()) {
-            
-            return ResponseHandler.responseError(HttpStatus.BAD_REQUEST.value(), "Validation error", bindingResult.getAllErrors());
-        }
+    public ResponseEntity<?> loginUser(@Valid @RequestBody User userDto) {
         try {
             User loggedInUser = userService.login(userDto);
-
-            return ResponseHandler.responseData(HttpStatus.OK.value(), "Login successful", loggedInUser);
+            return ResponseEntity.status(HttpStatus.OK)
+                .body(Map.of("message", "Login successful", "user", loggedInUser));
         } catch (Exception e) {
-            return ResponseHandler.responseError(HttpStatus.BAD_REQUEST.value(), "Login failed", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("message", "Login failed", "error", e.getMessage()));
         }
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@Validated @RequestBody PasswordReset resetPasswordDto, BindingResult bindingResult) {
-        if (bindingResult.hasErrors()) {
-            return ResponseHandler.responseError(HttpStatus.BAD_REQUEST.value(), "Validation error", bindingResult.getAllErrors());
-        }
+    public ResponseEntity<?> resetPassword(@RequestParam String email, @RequestParam String newPassword) {
         try {
-            userService.resetPassword(resetPasswordDto, null);
-            return ResponseHandler.responseMessage(HttpStatus.OK.value(), "Password reset successful", true);
+            userService.updatePassword(email, newPassword);
+            return ResponseEntity.status(HttpStatus.OK)
+                .body(Map.of("message", "Password reset successful", "success", true));
         } catch (Exception e) {
-            return ResponseHandler.responseError(HttpStatus.BAD_REQUEST.value(), "Password reset failed", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("message", "Password reset failed", "error", e.getMessage()));
         }
     }
 }
-

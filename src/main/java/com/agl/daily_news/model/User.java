@@ -1,8 +1,7 @@
 package com.agl.daily_news.model;
 
-import javax.persistence.*;
-
-import jakarta.validation.constraints.NotBlank;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 
 @Entity
 @Table(name = "users")
@@ -10,20 +9,15 @@ public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
     @Column(unique = true)
-    @NotBlank(message = "Username cannot be empty")
     private String username;
-
     @Column(unique = true)
-    @NotBlank(message = "Email cannot be empty")
     private String email;
-
-    @NotBlank(message = "Password cannot be empty")
     private String password;
 
+    @NotNull
     @Column(name = "role")
-    private int userRole;
+    private Integer userRole;
 
     // Constructors, getters, and setters
     public User() {}
