@@ -3,6 +3,7 @@ package com.agl.daily_news.service.comment;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,7 +36,11 @@ public class CommentServiceImpl implements CommentService {
         if (optionalNews.isPresent() && optionalUser.isPresent()) {
             News news = optionalNews.get();
             User user = optionalUser.get();
-            
+
+            if (!Objects.equals(user.getId(), userId)) {
+                throw new RuntimeException("User ID mismatch.");
+            }
+
             comment.setNews(news);
             comment.setCreatedBy(user);
             comment.setCreatedAt(new Date());
@@ -47,8 +52,21 @@ public class CommentServiceImpl implements CommentService {
     }
 
     @Override
-    public void deleteComment(Long commentId) {
-        commentRepository.deleteById(commentId);
+    public void deleteComment(Long commentId, Long userId) {
+        Optional<Comment> optionalComment = commentRepository.findById(commentId);
+
+        if (optionalComment.isPresent()) {
+            Comment comment = optionalComment.get();
+
+            // Validate that the user ID from the token matches the user ID of the comment creator
+            if (!Objects.equals(comment.getCreatedBy().getId(), userId)) {
+                throw new RuntimeException("User ID mismatch.");
+            }
+
+            commentRepository.deleteById(commentId);
+        } else {
+            throw new RuntimeException("Invalid comment.");
+        }
     }
 
 }

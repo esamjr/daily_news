@@ -1,23 +1,29 @@
 package com.agl.daily_news.controller;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.agl.daily_news.model.Category;
 import com.agl.daily_news.model.News;
@@ -25,11 +31,15 @@ import com.agl.daily_news.model.Tag;
 import com.agl.daily_news.repository.CategoryRepository;
 import com.agl.daily_news.repository.NewsRepository;
 import com.agl.daily_news.repository.TagRepository;
+import com.agl.daily_news.service.imageUpload.ImageUploadService;
 import com.agl.daily_news.service.news.NewsRequest;
 import com.agl.daily_news.service.news.NewsService;
 
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/api/news")
+
 public class NewsController {
 
     @Autowired
@@ -40,6 +50,8 @@ public class NewsController {
     private TagRepository tagRepository;
     @Autowired
     private CategoryRepository categoryRepository;
+    @Autowired
+    private ImageUploadService imageUploadService;
     @GetMapping("/newest")
     public ResponseEntity<?> getAllNews() {
         try {
@@ -80,35 +92,67 @@ public class NewsController {
     }
 
     @PostMapping("/create/{userId}")
-    public ResponseEntity<News> createNews(
+    public ResponseEntity<?> createNews(
         @PathVariable Long userId,
-        @RequestBody NewsRequest createNewsRequest) {
-    String title = createNewsRequest.getTitle();
-    String content = createNewsRequest.getContent();
-    List<String> tagNames = createNewsRequest.getTags();
-    Long categoryId = createNewsRequest.getCategoryId();
-    Set<Tag> tags = new HashSet<>();
-    for (String tagName : tagNames) {
-        Tag tag = tagRepository.findByName(tagName).orElseGet(() -> {
-            Tag newTag = new Tag(tagName);
-            return tagRepository.save(newTag);
-        });
-        tags.add(tag);
+        @ModelAttribute @Valid NewsRequest createNewsRequest,
+        @RequestParam("imageFile") MultipartFile imageFile,
+        BindingResult bindingResult) {
 
-        tag.setCount(tag.getCount() + 1);
-        tagRepository.save(tag);
+        if (bindingResult.hasErrors()) {
+            List<String> validationErrors = bindingResult.getFieldErrors()
+                .stream()
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .collect(Collectors.toList());
+
+            return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("message", "Validation error", "errors", validationErrors));
+        }
+
+        try {
+            String title = createNewsRequest.getTitle();
+            String content = createNewsRequest.getContent();
+            List<String> tagNames = createNewsRequest.getTags();
+            Long categoryId = createNewsRequest.getCategoryId();
+            Set<Tag> tags = new HashSet<>();
+            if (title != null && content != null && tagNames != null && categoryId != null) {
+                for (String tagName : tagNames) {
+                    Tag tag = tagRepository.findByName(tagName).orElseGet(() -> {
+                        Tag newTag = new Tag(tagName);
+                        return tagRepository.save(newTag);
+                    });
+                    tags.add(tag);
+
+                    tag.setCount(tag.getCount() + 1);
+                    tagRepository.save(tag);
+                }
+
+            String imagePath = imageUploadService.uploadImage(imageFile);
+
+            News news = new News();
+            news.setTitle(title);
+            news.setContent(content);
+            news.setImagePath(imagePath);
+            news.setTags(tags);
+            Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new NoSuchElementException("Category Tidak ada"));
+            news.setCategory(category);
+
+            News createdNews = newsService.createNews(news, userId);
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdNews);
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("One or more request parameters are null.");
+            }
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            String errorMessage = "An error occurred while processing the request.";
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorMessage);
+        }
     }
-    News news = new News();
-    news.setTitle(title);
-    news.setContent(content);
-    news.setTags(tags);
-    Category category = categoryRepository.findById(categoryId)
-        .orElseThrow(() -> new NoSuchElementException("Category Tidak ada"));
-    news.setCategory(category);
-    
-    News createdNews = newsService.createNews(news, userId);
-    return ResponseEntity.status(HttpStatus.CREATED).body(createdNews);
-    }
+
+
+
 
     @PutMapping("/{id}/{userId}")
     public ResponseEntity<News> updateNews(@PathVariable Long id, @RequestBody News news, @PathVariable Long userId) {

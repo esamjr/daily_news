@@ -1,15 +1,17 @@
 package com.agl.daily_news.service.news;
 
 import com.agl.daily_news.model.News;
+import com.agl.daily_news.model.Role;
 import com.agl.daily_news.model.User;
 import com.agl.daily_news.repository.CommentRepository;
 import com.agl.daily_news.repository.NewsRepository;
 import com.agl.daily_news.repository.UserRepository;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -60,11 +62,16 @@ public class NewsServiceImpl implements NewsService {
             Optional<User> optionalUser = userRepository.findById(userId);
             if (optionalUser.isPresent()) {
                 User user = optionalUser.get();
-                if (user.getUserRole() == 2) {
+                Role userRole = user.getUserRole();
+
+                if (userRole != null && userRole.getId() == 2) {
+                    ZoneId jakartaZone = ZoneId.of("Asia/Jakarta");
+                    ZonedDateTime jakartaTime = ZonedDateTime.now(jakartaZone);
+                    Date publicationDate = Date.from(jakartaTime.toInstant());
                     news.setIsActive(true);
                     news.setCreatedBy(user.getId());
-                    news.setPublicationDate(new Date());
-                    
+                    news.setPublicationDate(publicationDate);
+
                     return newsRepository.save(news);
                 }
             }
@@ -80,7 +87,9 @@ public class NewsServiceImpl implements NewsService {
             News existingNews = optionalNews.get();
             User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
-            if (user.getId().equals(existingNews.getCreatedBy()) || user.getUserRole() == 1) {
+            Role userRole = user.getUserRole();
+
+            if (user.getId().equals(existingNews.getCreatedBy()) || (userRole != null && userRole.getId() == 1)) {
                 existingNews.setTitle(news.getTitle());
                 existingNews.setContent(news.getContent());
                 existingNews.setIsActive(news.getIsActive());
@@ -89,9 +98,10 @@ public class NewsServiceImpl implements NewsService {
                 throw new IllegalArgumentException("You are not authorized to update this news.");
             }
         } else {
-            return null;
+            throw new IllegalArgumentException("News not found");
         }
     }
+
 
     @Override
     public void deleteNews(Long id) {
@@ -102,3 +112,4 @@ public class NewsServiceImpl implements NewsService {
         return newsRepository.findTopTrendingNews(limit);
     }
 }
+

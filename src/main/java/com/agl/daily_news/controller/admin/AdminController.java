@@ -1,4 +1,4 @@
-package com.agl.daily_news.controller;
+package com.agl.daily_news.controller.admin;
 
 import com.agl.daily_news.model.Category;
 import com.agl.daily_news.service.category.*;

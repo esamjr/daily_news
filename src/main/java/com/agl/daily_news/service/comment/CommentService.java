@@ -6,6 +6,6 @@ import com.agl.daily_news.model.Comment;
 
 public interface CommentService {
     Comment addComment(Comment comment, Long newsId, Long userId);
-    void deleteComment(Long commentId);
+    void deleteComment(Long commentId, Long userId);
 }
 

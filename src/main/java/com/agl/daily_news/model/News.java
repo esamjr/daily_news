@@ -7,7 +7,6 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "news")
@@ -21,6 +20,8 @@ public class News {
     private String content;
     @Column(nullable = false)
     private Date publicationDate;
+    @Column(name = "image_path")
+    private String imagePath;
     @Column(nullable = false)
     private boolean isActive;
     @Column(name = "created_by")
@@ -121,5 +122,13 @@ public class News {
 
     public void setViewCount(Long viewCount) {
         this.viewCount = viewCount;
+    }
+
+    public String getImagePath() {
+        return imagePath;
+    }
+
+    public void setImagePath(String imagePath) {
+        this.imagePath = imagePath;
     }
 }

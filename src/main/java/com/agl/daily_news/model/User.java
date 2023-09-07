@@ -1,5 +1,7 @@
 package com.agl.daily_news.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 
@@ -15,20 +17,19 @@ public class User {
     private String email;
     private String password;
 
-    @NotNull
-    @Column(name = "role")
-    private Integer userRole;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "role")
+    private Role role;
 
     // Constructors, getters, and setters
     public User() {}
-    public User(String username, String email, String password, int userRole) {
+    public User(String username, String email, String password, Role userRole) {
         this.username = username;
         this.email = email;
         this.password = password;
-        this.userRole = userRole;
+        this.role = userRole;
     }
 
-    // Getter and setter methods for all fields
     public Long getId() {
         return id;
     }
@@ -61,12 +62,12 @@ public class User {
         this.password = password;
     }
 
-    public int getUserRole() {
-        return userRole;
+    public Role getUserRole() {
+        return role;
     }
 
-    public void setUserRole(int userRole) {
-        this.userRole = userRole;
+    public void setUserRole(Role userRole) {
+        this.role = userRole;
     }
 }
 

@@ -2,8 +2,10 @@ package com.agl.daily_news.controller;
 
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -11,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.agl.daily_news.exception.CustomException;
 import com.agl.daily_news.model.User;
 import com.agl.daily_news.service.user.UserService;
 
@@ -21,7 +24,6 @@ import jakarta.validation.Valid;
 public class UserController {
 
     private final UserService userService;
-
     public UserController(UserService userService) {
         this.userService = userService;
     }
@@ -45,12 +47,10 @@ public class UserController {
     @PostMapping("/login")
     public ResponseEntity<?> loginUser(@Valid @RequestBody User userDto) {
         try {
-            User loggedInUser = userService.login(userDto);
-            return ResponseEntity.status(HttpStatus.OK)
-                .body(Map.of("message", "Login successful", "user", loggedInUser));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of("message", "Login failed", "error", e.getMessage()));
+            return userService.login(userDto);
+        } catch (CustomException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("message", "An error occurred", "error", e.getMessage()));
         }
     }
 
