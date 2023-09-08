@@ -20,8 +20,8 @@ public class News {
     private String content;
     @Column(nullable = false)
     private Date publicationDate;
-    @Column(name = "image_path")
-    private String imagePath;
+    // @Column(name = "image_path")
+    // private String imagePath;
     @Column(nullable = false)
     private boolean isActive;
     @Column(name = "created_by")
@@ -124,11 +124,11 @@ public class News {
         this.viewCount = viewCount;
     }
 
-    public String getImagePath() {
-        return imagePath;
-    }
+    // public String getImagePath() {
+    //     return imagePath;
+    // }
 
-    public void setImagePath(String imagePath) {
-        this.imagePath = imagePath;
-    }
+    // public void setImagePath(String imagePath) {
+    //     this.imagePath = imagePath;
+    // }
 }

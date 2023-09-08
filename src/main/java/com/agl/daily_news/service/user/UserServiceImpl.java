@@ -67,33 +67,26 @@ public class UserServiceImpl implements UserService {
     @Override
     public ResponseEntity<?> login(User request) {
         try {
-            // Create a UsernamePasswordAuthenticationToken for authentication
             UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken =
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword());
+            
+                Authentication authentication = authenticationManager.authenticate(usernamePasswordAuthenticationToken);
 
-            // Authenticate the user using the AuthenticationManager
-            Authentication authentication = authenticationManager.authenticate(usernamePasswordAuthenticationToken);
-
-            // Set the authenticated user in the SecurityContext
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
-            // Generate a JWT token
             String token = jwtUtil.createToken(request.getEmail());
 
             Map<String, Object> data = new HashMap<>();
             data.put("email", request.getEmail());
             data.put("token", token);
 
-            // Return a success response with the JWT token
             return ResponseEntity.status(HttpStatus.OK)
                 .body(data);
         } catch (Exception e) {
-            // Handle authentication failure
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(Map.of("message", "Authentication failed", "error", e.getMessage()));
         }
     }
-
 
     @Override
     public void updatePassword(String email, String newPassword) throws CustomException {
@@ -101,7 +94,7 @@ public class UserServiceImpl implements UserService {
         if (user == null && newPassword == null) {
             throw new CustomException("User not found with the provided email address OR New Password cant be null");
         } else {
-            user.setPassword(newPassword);
+            user.setPassword(bCryptPasswordEncoder.encode(newPassword));
             userRepository.save(user);
         }
     }

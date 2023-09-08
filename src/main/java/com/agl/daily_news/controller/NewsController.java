@@ -1,6 +1,8 @@
 package com.agl.daily_news.controller;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -10,8 +12,16 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.StreamUtils;
+import org.springframework.util.StringUtils;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,7 +31,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -34,7 +46,9 @@ import com.agl.daily_news.repository.TagRepository;
 import com.agl.daily_news.service.imageUpload.ImageUploadService;
 import com.agl.daily_news.service.news.NewsRequest;
 import com.agl.daily_news.service.news.NewsService;
+import com.agl.daily_news.service.storageImage.StorageImageService;
 
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 
 @RestController
@@ -52,6 +66,10 @@ public class NewsController {
     private CategoryRepository categoryRepository;
     @Autowired
     private ImageUploadService imageUploadService;
+    @Autowired
+    private StorageImageService storageImageService;
+    @Value("${upload.directory}")
+    private String uploadDirectory;
     @GetMapping("/newest")
     public ResponseEntity<?> getAllNews() {
         try {
@@ -127,19 +145,19 @@ public class NewsController {
                     tagRepository.save(tag);
                 }
 
-            String imagePath = imageUploadService.uploadImage(imageFile);
-
-            News news = new News();
-            news.setTitle(title);
-            news.setContent(content);
-            news.setImagePath(imagePath);
-            news.setTags(tags);
-            Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new NoSuchElementException("Category Tidak ada"));
-            news.setCategory(category);
-
-            News createdNews = newsService.createNews(news, userId);
-            return ResponseEntity.status(HttpStatus.CREATED).body(createdNews);
+                News news = new News();
+                news.setTitle(title);
+                news.setContent(content);
+                news.setTags(tags);
+                Category category = categoryRepository.findById(categoryId)
+                    .orElseThrow(() -> new NoSuchElementException("Category Tidak ada"));
+                news.setCategory(category);
+                News createdNews = newsService.createNews(news, userId);
+                Long newsId = createdNews.getId(); 
+                storageImageService.storeImage(imageFile, newsId);
+                // createdNews.setImagePath(imageUrl);
+                // newsService.updateNews(newsId, createdNews, userId);
+                return ResponseEntity.status(HttpStatus.CREATED).body(createdNews);
             } else {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("One or more request parameters are null.");
             }
@@ -150,9 +168,6 @@ public class NewsController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorMessage);
         }
     }
-
-
-
 
     @PutMapping("/{id}/{userId}")
     public ResponseEntity<News> updateNews(@PathVariable Long id, @RequestBody News news, @PathVariable Long userId) {
@@ -165,8 +180,52 @@ public class NewsController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteNews(@PathVariable Long id) {
+    public ResponseEntity<?> deleteNews(@PathVariable Long id) {
         newsService.deleteNews(id);
-        return ResponseEntity.noContent().build();
+        String message = "Success Deleted News with id" + id;
+        return ResponseEntity.status(HttpStatus.OK).body(message);
     }
+    
+    // @GetMapping("/file/uploads/{filename:.+}")
+    // public ResponseEntity<?> serveFile(@PathVariable String filename) {
+    //     try {
+    //         String filePath = imageUploadService.getImageFilePath(filename);
+    //         Resource resource = new UrlResource(filePath);
+
+    //         if (resource.exists() && resource.isReadable()) {
+    //             String contentType;
+    //             // Determine content type based on file extension
+    //             String fileExtension = StringUtils.getFilenameExtension(filename);
+    //             if (StringUtils.hasText(fileExtension)) {
+    //                 fileExtension = fileExtension.toLowerCase();
+    //                 switch (fileExtension) {
+    //                     case "jpg":
+    //                     case "jpeg":
+    //                         contentType = MediaType.IMAGE_JPEG_VALUE;
+    //                         break;
+    //                     case "png":
+    //                         contentType = MediaType.IMAGE_PNG_VALUE;
+    //                         break;
+    //                     default:
+    //                         contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE;
+    //                 }
+    //             } else {
+    //                 contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE;
+    //             }
+
+    //             return ResponseEntity.ok()
+    //                     .header(HttpHeaders.CONTENT_TYPE, contentType)
+    //                     .body(resource);
+    //         } else {
+    //             return ResponseEntity.notFound().build();
+    //         }
+    //     } catch (MalformedURLException e) {
+    //         return ResponseEntity.notFound().build();
+    //     } catch (IOException e) {
+    //         e.printStackTrace();
+    //         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+    //     }
+    // }
+
+
 }

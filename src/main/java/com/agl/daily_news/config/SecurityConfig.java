@@ -43,12 +43,20 @@ public class SecurityConfig {
 
     // authorize request
     http.authorizeHttpRequests(auth -> {
-      auth.requestMatchers("/").permitAll().requestMatchers("/api-docs").permitAll()
-          .requestMatchers("/api-docs.yaml").permitAll().requestMatchers("/swagger-ui/*").permitAll().requestMatchers("/api-docs/swagger-config").permitAll()
+      auth.requestMatchers("/").permitAll()
+          .requestMatchers("/api-docs").permitAll()
+          .requestMatchers("/api-docs.yaml").permitAll()
+          .requestMatchers("/swagger-ui/*").permitAll()
+          .requestMatchers("/api-docs/swagger-config").permitAll()
           .requestMatchers(HttpMethod.POST, "api/users/*").permitAll()
           .requestMatchers("/admin/**").hasAuthority("ADMIN")
           .requestMatchers("/api/news/create/**").hasAuthority("CREATOR")
+          .requestMatchers("/api/news/by-tag/**").permitAll()
+          .requestMatchers("/api/news/trending").permitAll()
+          .requestMatchers("/api/news/*").permitAll()
+          .requestMatchers("/api/news/*/**").hasAuthority("CREATOR")
           .requestMatchers("/api/comments/**").hasAnyAuthority("CREATOR", "ADMIN", "USER")
+          .requestMatchers(HttpMethod.GET, "/files/**").permitAll()
           .anyRequest().fullyAuthenticated();
     });
 
