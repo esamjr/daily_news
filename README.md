@@ -147,4 +147,11 @@ This document provides information about the endpoints available in the Daily Ne
   - `newPassword` (String) - New password for the user.
 - **Response:** Returns a success message or an error message.
 
+### Load News Image
+
+- **Endpoint:** `POST /api/images/{filename}`
+- **Description:** Retrieves images news articles.
+- **Request Parameters:**
+  - `filename` (String) - News Images Filename.
+- **Response:** Returns a success message or an error message.
 ---
